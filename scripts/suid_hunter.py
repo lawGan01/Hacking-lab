@@ -6,13 +6,13 @@ KNOWN_VULN = [
     "ruby", "php", "bash", "sh", "cp", "mv", "find", "xargs", "tar", "zip"
 ]
 
-def scan_suid():
-    print("[*] Hunting SUID/SGID files...")
+def scan_suid(search_path="/"):
+    print("[*] Hunting SUID/SGID files in: " + search_path)
     print("-" * 60)
     
     try:
         result = subprocess.run(
-            ["find", "/", "-perm", "-4000", "-o", "-perm", "-2000"],
+            ["find", search_path, "-perm", "-4000", "-o", "-perm", "-2000"],
             capture_output=True, text=True, timeout=60
         )
         files = [f for f in result.stdout.strip().split("\n") if f]
@@ -32,10 +32,7 @@ def scan_suid():
         mode = os.stat(f).st_mode
         owner = os.stat(f).st_uid
         
-        # Check if root-owned
         is_root = (owner == 0)
-        
-        # Check for known vulnerable binaries
         basename = os.path.basename(f)
         is_known = basename in KNOWN_VULN
         
@@ -51,6 +48,8 @@ def scan_suid():
             print("[!] Root-owned SUID: " + f)
         elif is_known:
             print("[*] Known binary (not root): " + f)
+        else:
+            print("[ ] SUID/SGID: " + f)
     
     print("-" * 60)
     print("[*] Total SUID/SGID: " + str(total))
@@ -63,4 +62,5 @@ def scan_suid():
             print("  " + f)
 
 if __name__ == "__main__":
-    scan_suid()
+    path = sys.argv[1] if len(sys.argv) > 1 else "/"
+    scan_suid(path)
